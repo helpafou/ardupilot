@@ -22,8 +22,19 @@ FLASH_RESERVE_START_KB 128
 # only one I2C bus
 I2C_ORDER I2C1 I2C2
 
+# now the UART order. These map to the hal.uartA to hal.uartF
+# objects. If you use a shorter list then HAL_Empty::UARTDriver
+# objects are substituted for later UARTs, or you can leave a gap by
+# listing one or more of the uarts as EMPTY
+# 1) SERIAL0: console (primary mavlink, usually USB)
+# 2) SERIAL1: telem1
+# 3) SERIAL2: telem2
+# 4) SERIAL3: primary GPS
+# 5) SERIAL4: GPS2
+# 6) SERIAL5: extra UART (usually RTOS debug console)
+
 # order of UARTs (and USB)
-SERIAL_ORDER OTG1 USART1 USART3 UART8 OTG2
+SERIAL_ORDER OTG1 UART7 USART1 USART3 UART8 OTG2
 
 # default the 2nd interface to MAVLink2
 define HAL_OTG2_PROTOCOL SerialProtocol_MAVLink2
@@ -65,6 +76,26 @@ PE2  QUADSPI_BK1_IO2 QUADSPI1
 PD13 QUADSPI_BK1_IO3 QUADSPI1
 PB6  QUADSPI_BK1_NCS QUADSPI1
 PB2  QUADSPI_CLK     QUADSPI1
+
+# IBUS, SBUS, FR_SKY PPM
+
+# default to RCIN using timer capture
+PC7  TIM8_CH2 TIM8 RCININT PULLDOWN
+
+# USART6 is SBUS
+#PC7 USART6_RX USART6 NODMA
+#PC6 USART6_TX USART6 NODMA
+
+PE15 SBUS_INV OUTPUT
+
+# UART7 is FR_SKY/SBUS
+PE7 UART7_RX UART7 NODMA
+PE8 UART7_TX UART7 NODMA
+# allow this uart to be inverted for transmit under user control
+# the polarity is the value to use on the GPIO to change the polarity
+# to the opposite of the default
+PC3 FR_SKY_INV OUTPUT HIGH GPIO(7) POL(0)
+
 
 # I2C1 for baro
 PB8 I2C1_SCL I2C1 NOLLUP
@@ -109,30 +140,40 @@ define HAL_STORAGE_SIZE 16384
 
 define HAL_SPI_CHECK_CLOCK_FREQ
 
-PA1  LED0 OUTPUT LOW    GPIO(0)
-PC4  LED1 OUTPUT LOW    GPIO(1)
-PC13 LED2 OUTPUT LOW    GPIO(2)
+PA1  LED0           OUTPUT PUSHPULL LOW GPIO(0)
+PC4  LED1           OUTPUT PUSHPULL LOW GPIO(1)
+PC13 LED_ACTIVITY   OUTPUT PUSHPULL LOW GPIO(2)
 
 PE3  EXTERN_GPIO1 INPUT GPIO(3)
 PC5  EXTERN_GPIO2 INPUT GPIO(4)
+
+# 1.8V voltage enable 
+PB15 FMU_EN_1V8 OUTPUT HIGH    GPIO(5)
+
+# buzzer
+PE4 BUZZER OUTPUT GPIO(6) LOW
+define HAL_BUZZER_PIN 6
+define HAL_BUZZER_ON 1
+define HAL_BUZZER_OFF 0
 
 # analog in
 PA4 BATT_VOLTAGE_SENS ADC1 SCALE(5.667)
 PA5 VDD_5V_SENS       ADC1 SCALE(1.667)
 
 # SPI devices
+PD4 IMU_0_INT   INPUT  PULLUP
+PD6 IMU_0_CS CS
+
+
 
 # IMU
 SPIDEV icm20948       SPI1 DEVID1  IMU_0_CS       MODE3  4*MHZ  8*MHZ
 
 # IMU
-IMU Invensensev2 SPI:icm20948 ROTATION_PITCH_180
-
-PD4 IMU_0_INT  INPUT PULLUP
-PD6 IMU_0_CS CS
+IMU Invensensev2 SPI:icm20948 ROTATION_PITCH_180_YAW_90
 
 # COMPASS
-COMPASS AK09916:probe_ICM20948 0 ROTATION_ROLL_180_YAW_90
+COMPASS AK09916:probe_ICM20948 0 ROTATION_PITCH_180_YAW_90
 
 CHECK_ICM20948      spi_check_register("icm20948", INV2REG_WHOAMI, INV2_WHOAMI_ICM20948)
 
@@ -146,4 +187,4 @@ PB9 BARO_0_INT INPUT PULLUP
 #define ALLOW_ARM_NO_COMPASS
 #define HAL_BARO_ALLOW_INIT_NO_BARO 1
 
-# define HAL_DISABLE_DCACHE
+#define HAL_DISABLE_DCACHE

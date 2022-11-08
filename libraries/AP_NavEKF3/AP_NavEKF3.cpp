@@ -1211,6 +1211,15 @@ bool NavEKF3::getAirSpdVec(Vector3f &vel) const
     return false;
 }
 
+// return the innovation in m/s, innovation variance in (m/s)^2 and age in msec of the last TAS measurement processed
+bool NavEKF3::getAirSpdHealthData(float &innovation, float &innovationVariance, uint32_t &age_ms) const
+{
+    if (core) {
+        return core[primary].getAirSpdHealthData(innovation, innovationVariance, age_ms);
+    }
+    return false;
+}
+
 // Return the rate of change of vertical position in the down direction (dPosD/dt) in m/s
 float NavEKF3::getPosDownDerivative() const
 {
@@ -1237,6 +1246,12 @@ void NavEKF3::getAccelBias(int8_t instance, Vector3f &accelBias) const
     if (core) {
         core[instance].getAccelBias(accelBias);
     }
+}
+
+// returns active source set used by EKF3
+uint8_t NavEKF3::get_active_source_set() const
+{
+    return sources.get_active_source_set();
 }
 
 // reset body axis gyro bias estimates
@@ -1359,6 +1374,10 @@ bool NavEKF3::getOriginLLH(struct Location &loc) const
 {
     if (!core) {
         return false;
+    }
+    if (common_origin_valid) {
+        loc = common_EKF_origin;
+        return true;
     }
     return core[primary].getOriginLLH(loc);
 }
@@ -1776,10 +1795,10 @@ void NavEKF3::getFilterStatus(nav_filter_status &status) const
 }
 
 // send an EKF_STATUS_REPORT message to GCS
-void NavEKF3::send_status_report(mavlink_channel_t chan) const
+void NavEKF3::send_status_report(GCS_MAVLINK &link) const
 {
     if (core) {
-        core[primary].send_status_report(chan);
+        core[primary].send_status_report(link);
     }
 }
 
@@ -1988,8 +2007,8 @@ void NavEKF3::updateLaneSwitchPosDownResetData(uint8_t new_primary, uint8_t old_
 
     // Record the position delta between current core and new primary core and the timestamp of the core change
     // Add current delta in case it hasn't been consumed yet
-    core[old_primary].getPosD(posDownOldPrimary);
-    core[new_primary].getPosD(posDownNewPrimary);
+    core[old_primary].getPosD_local(posDownOldPrimary);
+    core[new_primary].getPosD_local(posDownNewPrimary);
     pos_down_reset_data.core_delta = posDownNewPrimary - posDownOldPrimary + pos_down_reset_data.core_delta;
     pos_down_reset_data.last_primary_change = imuSampleTime_us / 1000;
     pos_down_reset_data.core_changed = true;

@@ -34,10 +34,10 @@ I2C_ORDER I2C1 I2C2
 # 6) SERIAL5: extra UART (usually RTOS debug console)
 
 # order of UARTs (and USB)
-SERIAL_ORDER OTG1 UART7 USART1 USART3 UART8 OTG2
+SERIAL_ORDER OTG1 USART1 USART3 UART8 UART7 USART6 OTG2
 
-# default the 2nd interface to MAVLink2
-define HAL_OTG2_PROTOCOL SerialProtocol_MAVLink2
+# default the 2nd USB interface to MAVLink2
+# define HAL_OTG2_PROTOCOL SerialProtocol_MAVLink2
 
 PA11 OTG_FS_DM OTG1
 PA12 OTG_FS_DP OTG1
@@ -45,17 +45,19 @@ PA12 OTG_FS_DP OTG1
 PA13 JTMS-SWDIO SWD
 PA14 JTCK-SWCLK SWD
 
-# USART1 is telemet1
+# USART1 is telemet1 (radio telemetry)
 PA10 USART1_RX USART1 NODMA
 PA9  USART1_TX USART1 NODMA
+define HAL_SERIAL2_BAUD 19200
+# define HAL_SERIAL5_PROTOCOL SerialProtocol_MAVLink
 
-# USART3 (MAVLink2)
-PD8  USART3_TX USART3 NODMA
-PD9  USART3_RX USART3 NODMA
+# USART3 is telemet2 (on-screen display telemetry)
+PD8  USART3_TX      USART3 NODMA
+PD9  USART3_RX      USART3 NODMA
 PB14 USART3_RTS     USART3
 PB13 USART3_CTS_NSS USART3
-define HAL_SERIAL3_PROTOCOL SerialProtocol_MAVLink2
-define HAL_SERIAL3_BAUD 230400
+define HAL_SERIAL1_BAUD 57600
+# define HAL_SERIAL3_PROTOCOL SerialProtocol_MAVLink2
 
 # UART8 is GPS1
 PE0 UART8_RX UART8 NODMA
@@ -79,22 +81,20 @@ PB2  QUADSPI_CLK     QUADSPI1
 
 # IBUS, SBUS, FR_SKY PPM
 
+# "PPM" solder pad/resistor should be soldered and "S-BUS" resistor/solder pad removed
+# Overwise UART1 or RCIN will not work
 # default to RCIN using timer capture
-PC7  TIM8_CH2 TIM8 RCININT PULLDOWN
+#PC7  TIM8_CH2 TIM8 RCININT PULLDOWN
 
 # USART6 is SBUS
-#PC7 USART6_RX USART6 NODMA
-#PC6 USART6_TX USART6 NODMA
+PC7 USART6_RX USART6 NODMA
+PC6 USART6_TX USART6 NODMA
+PE15 SBUS_INV OUTPUT HIGH GPIO(7) POL(0)
 
-PE15 SBUS_INV OUTPUT
-
-# UART7 is FR_SKY/SBUS
+# UART7 is FR_SKY
 PE7 UART7_RX UART7 NODMA
 PE8 UART7_TX UART7 NODMA
-# allow this uart to be inverted for transmit under user control
-# the polarity is the value to use on the GPIO to change the polarity
-# to the opposite of the default
-PC3 FR_SKY_INV OUTPUT HIGH GPIO(7) POL(0)
+PC3 FR_SKY_INV OUTPUT HIGH GPIO(8) POL(0)
 
 
 # I2C1 for baro
@@ -163,8 +163,6 @@ PA5 VDD_5V_SENS       ADC1 SCALE(1.667)
 # SPI devices
 PD4 IMU_0_INT   INPUT  PULLUP
 PD6 IMU_0_CS CS
-
-
 
 # IMU
 SPIDEV icm20948       SPI1 DEVID1  IMU_0_CS       MODE3  4*MHZ  8*MHZ
